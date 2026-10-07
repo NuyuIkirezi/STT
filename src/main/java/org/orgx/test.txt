@@ -1,0 +1,107 @@
+class PaymentService {
+    public boolean processPayment(double amount) {
+        if (amount > 0) {
+            return true;
+        }
+        return false;
+    }
+}
+Notification Module
+class NotificationService {
+
+    public String sendConfirmation(String customer) {
+        return "Order confirmation sent to " + customer;
+    }
+}
+Order Module
+class OrderService {
+
+    private ProductService productService;
+    private InventoryService inventoryService;
+    private PaymentService paymentService;
+    private NotificationService notificationService;
+
+    public OrderService(ProductService productService,
+                        InventoryService inventoryService,
+                        PaymentService paymentService,
+                        NotificationService notificationService) {
+
+        this.productService = productService;
+        this.inventoryService = inventoryService;
+        this.paymentService = paymentService;
+        this.notificationService = notificationService;
+    }
+
+    public String placeOrder(String customer,
+                             String productId,
+                             int quantity) {
+
+        double price = productService.getPrice(productId);
+
+        if (price == 0) {
+            return "Product not found";
+        }
+
+        if (!inventoryService.checkStock(quantity)) {
+            return "Insufficient stock";
+        }
+
+        double total = price * quantity;
+
+        if (!paymentService.processPayment(total)) {
+            return "Payment failed";
+        }
+
+        inventoryService.reduceStock(quantity);
+
+        return notificationService.sendConfirmation(customer);
+    }
+}
+Main Application
+public class ShoppingSystem {
+
+    public static void main(String[] args) {
+
+        CustomerService customerService = new CustomerService();
+        ProductService productService = new ProductService();
+        InventoryService inventoryService = new InventoryService();
+        PaymentService paymentService = new PaymentService();
+        NotificationService notificationService =
+                new NotificationService();
+
+        OrderService orderService =
+                new OrderService(
+                        productService,
+                        inventoryService,
+                        paymentService,
+                        notificationService
+                );
+
+        // Customer login
+        boolean loggedIn =
+                customerService.authenticate("john", "1234");
+
+        if (!loggedIn) {
+            System.out.println("Login failed");
+            return;
+        }
+
+        System.out.println("Customer logged in successfully.");
+
+        // Place order
+        String result =
+                orderService.placeOrder(
+                        "John",
+                        "P100",
+                        2
+                );
+
+        System.out.println(result);
+
+        // Check inventory
+        System.out.println(
+                "Remaining stock: " +
+                inventoryService.getStock()
+        );
+    }
+}
